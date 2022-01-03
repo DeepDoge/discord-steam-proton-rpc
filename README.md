@@ -1,7 +1,7 @@
 # What is this?
 This thing let's Discord see your Steam games that are running with Proton.
 **Also works with Flatpak Steam**
-## What's funny
+## What's funny?
 While making this I realized something.
 Discord normally supports Proton games for Non-Flatpak Steam but its buggy and doesn't work until you go to settings and view `Activity Settings`.
 Then it triggers something and it magically shows the game.
