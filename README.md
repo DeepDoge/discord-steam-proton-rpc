@@ -1,6 +1,10 @@
 # What is this?
 This thing let's Discord see your Steam games that are running with Proton.
 **Also works with Flatpak Steam**
+## What's funny
+While making this I realized something.
+Discord normally supports Proton games for Non-Flatpak Steam but its buggy and doesn't work until you go to settings and view `Activity Settings`.
+Then it triggers something and it magically shows the game.
 
 # Build And Usage
 ## Build
@@ -16,7 +20,7 @@ This thing let's Discord see your Steam games that are running with Proton.
 
 ### Additional (You can skip this part if you're using Flatpak Steam)
 Since Steam installs Proton inside `steamapps/common` Discord also sees random Proton processes as Steam games. 
-And Discord can't always pick the right process to show on Game Activity.
+And Discord can't always pick the right process to show on `Game Activity`.
 To cause less confusion for Discord you can move folders you wanna hide from Discord out of the `steamapps/common`. 
 And link them back inside the `steamapps/common`. Discord ignores them while Steam can still use them. 
 ```bash
