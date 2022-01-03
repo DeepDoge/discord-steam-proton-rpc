@@ -41,6 +41,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
                             gameDirname = steamAppsDirname;
                             steamAppsDirname = Path.GetDirectoryName(gameDirname);
                         }
+                        if (steamAppsDirname == null) continue;
                         var fakeDir = $"{steamAppsDirname}/discord_proton_rpc";
                         var fakeExe = $"{fakeDir}/{Path.GetFileName(gameDirname)}";
 
