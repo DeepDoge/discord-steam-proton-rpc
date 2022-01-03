@@ -1,31 +1,19 @@
 ﻿using System.Diagnostics;
-using Newtonsoft.Json;
-
-using System;
 using System.Collections.Generic;
+using System;
+using System.IO;
+using System.Threading;
 using System.Linq;
 
 namespace MyApp // Note: actual namespace depends on the project name.
 {
     public class Program
     {
-        private static Dictionary<string, Process> Running = new Dictionary<string, Process>();
-
         public static void Main(string[] args)
         {
-            if (args.Length > 0)
-            {
-                var watchProccessId = int.Parse(args[0]);
-                var processToWatch = Process.GetProcessById(watchProccessId);
-                Console.WriteLine($"Watching PID:{watchProccessId}...");
-                processToWatch.WaitForExit();
-                Console.WriteLine($"Stopping watch process for PID:{watchProccessId}");
-                return;
-            }
-
-            Console.WriteLine("Runnning...");
-
             var currentProcess = Process.GetCurrentProcess();
+
+            Console.WriteLine($"Runnning...");
 
             var exit = false;
             var taskThread = new Thread(() =>
@@ -44,33 +32,29 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                         var commandLine = GetCommandLineOfProcess(steamProcess);
                         if (commandLine.Length == 0) continue;
-                        if (!(commandLine.StartsWith("steam ") && commandLine.ToLower().EndsWith(".exe"))) continue;
-                        var filename = commandLine.Substring("steam ".Length);
-                        var dirname = Path.GetDirectoryName(filename);
-                        if (Running.ContainsKey(dirname)) continue;
-
-                        Console.WriteLine($"Found PID:{steamProcess.Id} {filename}");
-
-                        var fakeExe = $"{dirname}/discord_proton_rpc.fake.exe";
-                        if (!File.Exists(fakeExe))
+                        if (!(commandLine.StartsWith("steam ") && commandLine.EndsWith(".exe"))) continue;
+                        var gameFilename = commandLine.Substring("steam ".Length);
+                        var gameDirname = "";
+                        var steamAppsDirname = Path.GetDirectoryName(gameFilename);
+                        while (steamAppsDirname != null && !steamAppsDirname.EndsWith("/steamapps/common"))
                         {
-                            File.CreateSymbolicLink(fakeExe, currentProcess.MainModule.FileName);
+                            gameDirname = steamAppsDirname;
+                            steamAppsDirname = Path.GetDirectoryName(gameDirname);
                         }
+                        var fakeDir = $"{steamAppsDirname}/discord_proton_rpc";
+                        var fakeExe = $"{fakeDir}/{Path.GetFileName(gameDirname)}";
+
+                        if (IsFileLocked(new FileInfo(fakeExe))) continue;
+
+                        Console.WriteLine($"Found PID:{steamProcess.Id} {gameFilename}");
+
+                        if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
+                        File.Copy($"{Path.GetDirectoryName(currentProcess.MainModule.FileName)}/rpc-trigger", fakeExe, true);
 
                         var rpcProcess = new Process();
                         rpcProcess.StartInfo.FileName = fakeExe;
-                        rpcProcess.StartInfo.Arguments = steamProcess.Id.ToString();
-                        rpcProcess.StartInfo.UseShellExecute = false;
+                        rpcProcess.StartInfo.Arguments = $"{steamProcess.Id} {currentProcess.Id}";
                         rpcProcess.Start();
-
-                        Running[dirname] = rpcProcess;
-
-                        // This didnt work for some reasons???
-                        // rpcProcess.Exited += new EventHandler((object o, EventArgs a) => Running.Remove(dirname));
-                        new Thread(() => {
-                            rpcProcess.WaitForExit();
-                            Running.Remove(dirname);
-                        }).Start();
 
                         Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeExe}");
                         didStuff = true;
@@ -88,11 +72,6 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
             // wait for thread to exit
             while (taskThread.ThreadState == System.Threading.ThreadState.Running) Thread.Sleep(1);
-
-            foreach (var process in Running.Values)
-            {
-                process.Kill();
-            }
         }
 
         private static string GetCommandLineOfProcess(Process process)
@@ -109,6 +88,28 @@ namespace MyApp // Note: actual namespace depends on the project name.
             p.WaitForExit();
             if (lines.Length < 2) throw new ArgumentException();
             return lines[1];
+        }
+
+        private static bool IsFileLocked(FileInfo file)
+        {
+            try
+            {
+                using (FileStream stream = file.Open(FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    stream.Close();
+                }
+            }
+            catch (IOException)
+            {
+                //the file is unavailable because it is:
+                //still being written to
+                //or being processed by another thread
+                //or does not exist (has already been processed)
+                return true;
+            }
+
+            //file is not locked
+            return false;
         }
     }
 }
