@@ -23,9 +23,9 @@ namespace MyApp // Note: actual namespace depends on the project name.
                 {
                     if (didStuff) Console.WriteLine("Press X to exit");
                     didStuff = false;
-
+                    
                     var steamProcesses = Process.GetProcessesByName("steam");
-
+                    Thread.Sleep(1000);
                     foreach (var steamProcess in steamProcesses)
                     {
                         if (steamProcess.MainModule == null) continue;
@@ -64,15 +64,18 @@ namespace MyApp // Note: actual namespace depends on the project name.
             });
             taskThread.Start();
 
-            while (true)
+            if (!Console.IsInputRedirected)
             {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.X) break;
+                while (true)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.X) break;
+                }
+                exit = true; // tell thread to exit
             }
-            exit = true; // tell thread to exit
 
             // wait for thread to exit
-            while (taskThread.ThreadState == System.Threading.ThreadState.Running) Thread.Sleep(1);
+            taskThread.Join();
         }
 
         private static string GetCommandLineOfProcess(Process process)
