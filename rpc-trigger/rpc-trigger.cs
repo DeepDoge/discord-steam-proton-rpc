@@ -5,7 +5,7 @@ class RpcTrigger
 {
     static void Main(string[] args)
     {
-        Application.Init();
+        Application.Init(); 
 
         var exit = false;
 
