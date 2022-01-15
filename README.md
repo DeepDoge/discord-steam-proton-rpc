@@ -13,6 +13,8 @@ This thing let's Discord see your Steam games that are running with Proton.
 - You need to have `dotnet` sdk for `.NET6.0`
 - Then run `build.sh`.
 - It's gonna create 2 executable files in `./dist`.
+### If you don't wanna build
+Download executables: https://gitlab.com/dumshiba/discord-steam-proton-rpc/-/raw/executables/dist.zip
 ## Usage
 - Just run the the `discord-steam-proton-rpc` in `dist` directory.
 - - Or add it to your startup application.
