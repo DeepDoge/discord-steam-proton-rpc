@@ -61,7 +61,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                     SetSettings();
 
-                    var steamProcesses = Process.GetProcessesByName("reaper");
+                    var steamProcesses = Process.GetProcessesByName("steam");
                     Thread.Sleep(1000);
                     foreach (var steamProcess in steamProcesses)
                     {
@@ -69,12 +69,11 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                         var commandLine = GetCommandLineOfProcess(steamProcess);
                         if (commandLine.Length == 0) continue;
-                        const string slicer = " -- ";
-                        var indexOfSlicer = commandLine.IndexOf(slicer);
-                        if (indexOfSlicer < 0) continue;
-                        var gameFilename = commandLine.Substring(indexOfSlicer + slicer.Length);
+                        const string prefix = "steam ";
+                        if (!commandLine.StartsWith(prefix)) continue;
+                        var gameFilename = commandLine.Substring(prefix.Length);
                         if (String.IsNullOrEmpty(gameFilename)) continue;
-                        if (!settings.detectNonProtonGamesToo && !gameFilename.EndsWith(".exe")) continue;
+                        if (!gameFilename.EndsWith(".exe")) continue;
 
                         var gameDirname = String.Empty;
                         var steamAppsDirname = Path.GetDirectoryName(gameFilename);
