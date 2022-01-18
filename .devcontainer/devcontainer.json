@@ -20,7 +20,8 @@
 	"extensions": [
 		"ms-dotnettools.csharp",
 		"eamodio.gitlens",
-		"gitlab.gitlab-workflow"
+		"gitlab.gitlab-workflow",
+		"patcx.vscode-nuget-gallery"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

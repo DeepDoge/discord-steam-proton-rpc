@@ -1,9 +1,6 @@
 ﻿using System.Diagnostics;
-using System.Collections.Generic;
-using System;
-using System.IO;
-using System.Threading;
-using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace MyApp // Note: actual namespace depends on the project name.
 {
@@ -12,6 +9,9 @@ namespace MyApp // Note: actual namespace depends on the project name.
         public static void Main(string[] args)
         {
             var currentProcess = Process.GetCurrentProcess();
+            if (currentProcess.MainModule == null) throw new Exception("Current process doesn't have a main module\nThis is not expected.");
+            var currentDirectory = Path.GetDirectoryName(currentProcess.MainModule.FileName);
+            var settingsJsonPath = Path.Join(currentDirectory, "settings.json");
 
             Console.WriteLine($"Runnning...");
 
@@ -19,11 +19,47 @@ namespace MyApp // Note: actual namespace depends on the project name.
             var taskThread = new Thread(() =>
             {
                 var didStuff = true;
+
+                var settings = default(Settings);
+                void SetSettings()
+                {
+                    if (!File.Exists(settingsJsonPath))
+                        File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(default(Settings)));
+                    var jObjectOfCurrentSettings = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(settingsJsonPath));
+                    
+                    var changesMade = false;
+                    
+                    if (jObjectOfCurrentSettings == null)
+                    {
+                        settings = default(Settings);
+                        changesMade = true;
+                    }
+                    else
+                    {
+                        var fields = typeof(Settings).GetFields();
+                        foreach (var field in fields)
+                        {
+                            if (!jObjectOfCurrentSettings.ContainsKey(field.Name))
+                            {
+                                var defaultValue = field.GetValue(null);
+                                if (defaultValue == null) throw new Exception(); 
+                                jObjectOfCurrentSettings.Add(field.Name, JToken.FromObject(defaultValue));
+                                changesMade = true;
+                            }
+                        }
+                        if (changesMade) settings = jObjectOfCurrentSettings.ToObject<Settings>();
+                    }
+
+                    if (changesMade) File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(settings));
+                }
+
                 while (!exit)
                 {
                     if (didStuff) Console.WriteLine("Press X to exit");
                     didStuff = false;
-                    
+
+                    SetSettings();
+
                     var steamProcesses = Process.GetProcessesByName("steam");
                     Thread.Sleep(1000);
                     foreach (var steamProcess in steamProcesses)
@@ -32,7 +68,8 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                         var commandLine = GetCommandLineOfProcess(steamProcess);
                         if (commandLine.Length == 0) continue;
-                        if (!(commandLine.StartsWith("steam ") && commandLine.EndsWith(".exe"))) continue;
+                        if (!commandLine.StartsWith("steam ")) continue;
+                        if (!settings.detectNonProtonGamesToo && !commandLine.EndsWith(".exe")) continue;
                         var gameFilename = commandLine.Substring("steam ".Length);
                         var gameDirname = "";
                         var steamAppsDirname = Path.GetDirectoryName(gameFilename);
@@ -42,15 +79,15 @@ namespace MyApp // Note: actual namespace depends on the project name.
                             steamAppsDirname = Path.GetDirectoryName(gameDirname);
                         }
                         if (steamAppsDirname == null) continue;
-                        var fakeDir = $"{steamAppsDirname}/discord_proton_rpc";
-                        var fakeExe = $"{fakeDir}/{Path.GetFileName(gameDirname)}";
+                        var fakeDir = Path.Join(steamAppsDirname, "discord_proton_rpc");
+                        var fakeExe = Path.Join(fakeDir, Path.GetFileName(gameDirname));
 
                         if (IsFileLocked(new FileInfo(fakeExe))) continue;
 
                         Console.WriteLine($"Found PID:{steamProcess.Id} {gameFilename}");
 
                         if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
-                        File.Copy($"{Path.GetDirectoryName(currentProcess.MainModule.FileName)}/rpc-trigger", fakeExe, true);
+                        File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeExe, true);
 
                         var rpcProcess = new Process();
                         rpcProcess.StartInfo.FileName = fakeExe;
