@@ -23,15 +23,16 @@ namespace MyApp // Note: actual namespace depends on the project name.
                 var settings = default(Settings);
                 void SetSettings()
                 {
+                    var defaultSettings = new Settings();
                     if (!File.Exists(settingsJsonPath))
-                        File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(default(Settings)));
+                        File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(defaultSettings, Formatting.Indented));
                     var jObjectOfCurrentSettings = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(settingsJsonPath));
                     
                     var changesMade = false;
                     
                     if (jObjectOfCurrentSettings == null)
                     {
-                        settings = default(Settings);
+                        settings = defaultSettings;
                         changesMade = true;
                     }
                     else
@@ -41,16 +42,16 @@ namespace MyApp // Note: actual namespace depends on the project name.
                         {
                             if (!jObjectOfCurrentSettings.ContainsKey(field.Name))
                             {
-                                var defaultValue = field.GetValue(null);
+                                var defaultValue = field.GetValue(defaultSettings);
                                 if (defaultValue == null) throw new Exception(); 
                                 jObjectOfCurrentSettings.Add(field.Name, JToken.FromObject(defaultValue));
                                 changesMade = true;
                             }
                         }
-                        if (changesMade) settings = jObjectOfCurrentSettings.ToObject<Settings>();
+                        settings = jObjectOfCurrentSettings.ToObject<Settings>();
                     }
 
-                    if (changesMade) File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(settings));
+                    if (changesMade) File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(settings, Formatting.Indented));
                 }
 
                 while (!exit)
@@ -60,7 +61,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                     SetSettings();
 
-                    var steamProcesses = Process.GetProcessesByName("steam");
+                    var steamProcesses = Process.GetProcessesByName("reaper");
                     Thread.Sleep(1000);
                     foreach (var steamProcess in steamProcesses)
                     {
@@ -68,17 +69,22 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                         var commandLine = GetCommandLineOfProcess(steamProcess);
                         if (commandLine.Length == 0) continue;
-                        if (!commandLine.StartsWith("steam ")) continue;
-                        if (!settings.detectNonProtonGamesToo && !commandLine.EndsWith(".exe")) continue;
-                        var gameFilename = commandLine.Substring("steam ".Length);
-                        var gameDirname = "";
+                        const string slicer = " -- ";
+                        var indexOfSlicer = commandLine.IndexOf(slicer);
+                        if (indexOfSlicer < 0) continue;
+                        var gameFilename = commandLine.Substring(indexOfSlicer + slicer.Length);
+                        if (String.IsNullOrEmpty(gameFilename)) continue;
+                        if (!settings.detectNonProtonGamesToo && !gameFilename.EndsWith(".exe")) continue;
+
+                        var gameDirname = String.Empty;
                         var steamAppsDirname = Path.GetDirectoryName(gameFilename);
-                        while (steamAppsDirname != null && !steamAppsDirname.EndsWith("/steamapps/common"))
+                        while (!String.IsNullOrEmpty(steamAppsDirname) && !steamAppsDirname.EndsWith("/steamapps/common"))
                         {
                             gameDirname = steamAppsDirname;
                             steamAppsDirname = Path.GetDirectoryName(gameDirname);
                         }
-                        if (steamAppsDirname == null) continue;
+                        if (steamAppsDirname == String.Empty) continue;
+
                         var fakeDir = Path.Join(steamAppsDirname, "discord_proton_rpc");
                         var fakeExe = Path.Join(fakeDir, Path.GetFileName(gameDirname));
 
