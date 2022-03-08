@@ -20,7 +20,7 @@
 	"extensions": [
 		"ms-dotnettools.csharp",
 		"eamodio.gitlens",
-		"gitlab.gitlab-workflow",
+		"github.vscode-pull-request-github",
 		"patcx.vscode-nuget-gallery"
 	],
 

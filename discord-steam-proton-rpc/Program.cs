@@ -61,7 +61,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                     SetSettings();
 
-                    var steamProcesses = Process.GetProcessesByName("steam");
+                    var steamProcesses = Process.GetProcessesByName("steam.exe").Concat((Process.GetProcessesByName("steam")));
                     Thread.Sleep(1000);
                     foreach (var steamProcess in steamProcesses)
                     {
@@ -69,7 +69,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                         var commandLine = GetCommandLineOfProcess(steamProcess);
                         if (commandLine.Length == 0) continue;
-                        const string prefix = "steam ";
+                        var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
                         if (!commandLine.StartsWith(prefix)) continue;
                         var gameFilename = commandLine.Substring(prefix.Length);
                         if (String.IsNullOrEmpty(gameFilename)) continue;
