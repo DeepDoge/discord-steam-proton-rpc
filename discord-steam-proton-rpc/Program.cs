@@ -71,7 +71,11 @@ namespace MyApp // Note: actual namespace depends on the project name.
                         if (commandLine.Length == 0) continue;
                         var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
                         if (!commandLine.StartsWith(prefix)) continue;
-                        var gameFilename = commandLine.Substring(prefix.Length);
+                        const string gameFilenameSuffix = ".exe";
+                        var gameFileNameEnd = commandLine.LastIndexOf(gameFilenameSuffix) + gameFilenameSuffix.Length;
+                        if (gameFileNameEnd < 0) continue;
+                        var gameFilename = commandLine.Substring(prefix.Length, gameFileNameEnd - prefix.Length);
+                        Console.WriteLine(gameFilename);
                         if (String.IsNullOrEmpty(gameFilename)) continue;
                         if (!gameFilename.EndsWith(".exe")) continue;
 
