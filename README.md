@@ -9,12 +9,12 @@ This thing let's Discord see your Steam games that are running with Proton.
 - Then it triggers something and it magically shows the game.
 
 # Build And Usage
-## Build
-- You need to have `dotnet` sdk for `.NET6.0`
+## Build (Skip this part if you are just gonna download the executables)
+- You need to have `dotnet` sdk for `.NET6.0` (You only need this, if you wanna build it yourself)
 - Then run `build.sh`.
 - It's gonna create 2 executable files in `./dist`.
 ### If you don't wanna build
-Download executables: https://github.com/DeepDoge/discord-steam-proton-rpc/releases/tag/release-2
+Download executables: https://github.com/DeepDoge/discord-steam-proton-rpc/releases/download/release-3/dist.zip
 ## Usage
 - Just run the the `discord-steam-proton-rpc` in `dist` directory.
 - - Or add it to your startup application.
