@@ -16,9 +16,20 @@ namespace MyApp // Note: actual namespace depends on the project name.
             Console.WriteLine($"Runnning...");
 
             var exit = false;
-            var taskThread = new Thread(() =>
+
+            if (!Console.IsInputRedirected)
             {
-                var didStuff = true;
+                while (true)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.X) break;
+                }
+                exit = true; // tell thread to exit
+            }
+
+            void task()
+            {
+                var showExitText = true;
 
                 var settings = default(Settings);
                 void SetSettings()
@@ -27,9 +38,9 @@ namespace MyApp // Note: actual namespace depends on the project name.
                     if (!File.Exists(settingsJsonPath))
                         File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(defaultSettings, Formatting.Indented));
                     var jObjectOfCurrentSettings = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(settingsJsonPath));
-                    
+
                     var changesMade = false;
-                    
+
                     if (jObjectOfCurrentSettings == null)
                     {
                         settings = defaultSettings;
@@ -43,7 +54,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
                             if (!jObjectOfCurrentSettings.ContainsKey(field.Name))
                             {
                                 var defaultValue = field.GetValue(defaultSettings);
-                                if (defaultValue == null) throw new Exception(); 
+                                if (defaultValue == null) throw new Exception();
                                 jObjectOfCurrentSettings.Add(field.Name, JToken.FromObject(defaultValue));
                                 changesMade = true;
                             }
@@ -56,8 +67,8 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                 while (!exit)
                 {
-                    if (didStuff) Console.WriteLine("Press X to exit");
-                    didStuff = false;
+                    if (showExitText) Console.WriteLine("Press X to exit");
+                    showExitText = false;
 
                     SetSettings();
 
@@ -104,24 +115,22 @@ namespace MyApp // Note: actual namespace depends on the project name.
                         rpcProcess.Start();
 
                         Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeExe}");
-                        didStuff = true;
+                        showExitText = true;
                     }
                 }
-            });
-            taskThread.Start();
-
-            if (!Console.IsInputRedirected)
-            {
-                while (true)
-                {
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.X) break;
-                }
-                exit = true; // tell thread to exit
             }
 
-            // wait for thread to exit
-            taskThread.Join();
+            // Start task
+            // Wait for it to exit
+            // If task fails for any reason start it again
+            while (true)
+            {
+                var taskThread = new Thread(task);
+                taskThread.Start();
+                taskThread.Join();
+                if (exit) break;
+                Thread.Sleep(2000);
+            }
         }
 
         private static string GetCommandLineOfProcess(Process process)
