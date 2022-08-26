@@ -1,5 +1,5 @@
 # What is this?
-This thing let's Discord see your Steam games that are running with Proton.
+This thing let's Discord see your Steam games that are running with Proton.<br/>
 EDIT: now also works for non proton linux games too, because discord also shows the wrong short process name for them, instead of the full name of the game.
 
 **Also works with Flatpak Steam**
