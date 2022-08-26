@@ -66,7 +66,13 @@ namespace MyApp // Note: actual namespace depends on the project name.
                         SetSettings();
 
                         var steamProcesses = Process.GetProcessesByName("steam.exe").Concat(Process.GetProcessesByName("steam"));
-                        if (settings.detectEveryGameProcess) steamProcesses = steamProcesses.Concat(Process.GetProcessesByName("reaper"));
+                        if (settings.detectNonProtonProcesses)
+                            steamProcesses = steamProcesses.Concat(Process.GetProcessesByName("reaper"));
+                        if (settings.hideProtonWineProcessesFromDiscordUsingSymbolicLinks)
+                            steamProcesses = steamProcesses
+                                .Concat(Process.GetProcessesByName("wineserver"))
+                                .Concat(Process.GetProcessesByName("pressure-vessel-wrap"));
+
                         Thread.Sleep(1000);
                         foreach (var steamProcess in steamProcesses)
                         {
@@ -76,31 +82,40 @@ namespace MyApp // Note: actual namespace depends on the project name.
                             if (commandLine.Length == 0) continue;
 
                             var gameFilename = default(string);
-                            if (steamProcess.ProcessName.StartsWith("steam"))
+                            switch (steamProcess.ProcessName)
                             {
-                                var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
-                                if (!commandLine.StartsWith(prefix)) continue;
+                                case "steam":
+                                case "steam.exe":
+                                    {
+                                        var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
+                                        if (!commandLine.StartsWith(prefix)) continue;
 
-                                const string gameFilenameSuffix = ".exe";
-                                var gameFileNameEnd = commandLine.LastIndexOf(gameFilenameSuffix) + gameFilenameSuffix.Length;
-                                if (gameFileNameEnd < 0) continue;
-                                gameFilename = commandLine.Substring(prefix.Length, gameFileNameEnd - prefix.Length);
-                                if (String.IsNullOrEmpty(gameFilename)) continue;
-                                if (!gameFilename.EndsWith(".exe")) continue;
+                                        const string gameFilenameSuffix = ".exe";
+                                        var gameFileNameEnd = commandLine.LastIndexOf(gameFilenameSuffix) + gameFilenameSuffix.Length;
+                                        if (gameFileNameEnd < 0) continue;
+                                        gameFilename = commandLine.Substring(prefix.Length, gameFileNameEnd - prefix.Length);
+                                        if (String.IsNullOrEmpty(gameFilename)) continue;
+                                        if (!gameFilename.EndsWith(".exe")) continue;
+                                    }
+                                    break;
+                                case "reaper":
+                                    {
+                                        const string gameFilenamePrefix = "-- /";
+                                        var startsAt = commandLine.IndexOf(gameFilenamePrefix, commandLine.IndexOf("reaper SteamLaunch AppId="));
+                                        if (startsAt < 0) continue;
+                                        gameFilename = commandLine.Substring(startsAt + gameFilenamePrefix.Length - 1);
+                                        if (String.IsNullOrEmpty(gameFilename)) continue;
+                                        if (gameFilename.IndexOf(" /home/") >= 0) continue;
+                                    }
+                                    break;
+                                default:
+                                    gameFilename = steamProcess.MainModule.FileName;
+                                    break;
                             }
-                            else if (steamProcess.ProcessName == "reaper")
-                            {
-                                const string gameFilenamePrefix = "-- /";
-                                var startsAt = commandLine.IndexOf(gameFilenamePrefix, commandLine.IndexOf("reaper SteamLaunch AppId="));
-                                if (startsAt < 0) continue;
-                                gameFilename = commandLine.Substring(startsAt + gameFilenamePrefix.Length - 1);
-                                if (String.IsNullOrEmpty(gameFilename)) continue;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"Unexpected steam process name: {steamProcess.ProcessName} PID: {steamProcess.Id}");
-                            }
-                            Console.WriteLine(gameFilename);
+
+                            Console.WriteLine($"==================================");
+                            Console.WriteLine($"Process filename: {gameFilename}");
+                            Console.WriteLine($"Process commandline: {commandLine}");
 
                             var gameDirname = String.Empty;
                             var steamAppsDirname = Path.GetDirectoryName(gameFilename);
@@ -111,24 +126,32 @@ namespace MyApp // Note: actual namespace depends on the project name.
                             }
                             if (String.IsNullOrEmpty(steamAppsDirname)) continue;
 
-                            var gameName = Path.GetFileName(gameDirname);
+                            var gameName = Path.GetFileNameWithoutExtension(gameDirname);
 
-                            if (settings.createSymbolicLinkForSteamApps && !IsSymbolic(gameDirname))
+                            if (gameName == "__discord_proton_rpc") continue;
+
+                            var isProtonWineProcess = gameName.StartsWith("SteamLinuxRuntime") || steamProcess.ProcessName == "wineserver";
+                            Console.WriteLine($"Is {nameof(isProtonWineProcess)}: {isProtonWineProcess}");
+
+                            if (isProtonWineProcess && !IsSymbolic(gameDirname))
                             {
                                 var steamAppsHiddenDirname = Path.Join(Path.GetDirectoryName(steamAppsDirname), "__common_hidden__discord-steam-proton-rpc");
                                 if (!Directory.Exists(steamAppsHiddenDirname)) Directory.CreateDirectory(steamAppsHiddenDirname);
-                                var gameDirnameHidden = Path.Join(steamAppsHiddenDirname, gameName);
+                                var gameDirnameHidden = Path.Join(steamAppsHiddenDirname, Path.GetFileName(gameDirname));
                                 Console.WriteLine($"Moving {gameDirname} to {gameDirnameHidden}\nAnd linking it back to {gameDirname}");
                                 Directory.Move(gameDirname, gameDirnameHidden);
                                 Directory.CreateSymbolicLink(gameDirname, gameDirnameHidden);
                             }
+
+                            // Don't do rpc related stuff because its not a game
+                            if (isProtonWineProcess) continue;
 
                             var fakeDir = Path.Join(steamAppsDirname, "__discord_proton_rpc");
                             var fakeExe = Path.Join(fakeDir, gameName);
 
                             if (File.Exists(fakeExe) && IsFileLocked(new FileInfo(fakeExe))) continue;
 
-                            Console.WriteLine($"Found PID:{steamProcess.Id} {gameFilename}");
+                            Console.WriteLine($"Found PID:{steamProcess.Id} PNAME:{steamProcess.ProcessName}");
 
                             if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
                             File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeExe, true);
@@ -144,6 +167,7 @@ namespace MyApp // Note: actual namespace depends on the project name.
                     }
                     catch (System.Exception ex)
                     {
+                        Console.WriteLine(ex.ToString());
                         File.AppendAllText(Path.Join(currentDirectory, "log.log"), $"{ex.ToString()}\n");
                     }
                 }

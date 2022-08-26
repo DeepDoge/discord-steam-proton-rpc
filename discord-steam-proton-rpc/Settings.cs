@@ -2,13 +2,13 @@ namespace MyApp
 {
     public struct Settings
     {
-        public bool createSymbolicLinkForSteamApps;
-        public bool detectEveryGameProcess;
+        public bool detectNonProtonProcesses;
+        public bool hideProtonWineProcessesFromDiscordUsingSymbolicLinks;
 
         public Settings()
         {
-            createSymbolicLinkForSteamApps = true;
-            detectEveryGameProcess = true;
+            detectNonProtonProcesses = true;
+            hideProtonWineProcessesFromDiscordUsingSymbolicLinks = true;
         }
     } 
 }
