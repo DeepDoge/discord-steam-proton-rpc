@@ -9,7 +9,7 @@ class RpcTrigger
 
         var exit = false;
 
-        Window window = new Window(Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName));
+        Window window = new Window(Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule?.FileName));
         window.DeleteEvent += delegate { exit = true; };
         window.DefaultSize = new Gdk.Size(0, 0);
         window.TypeHint = Gdk.WindowTypeHint.Splashscreen;

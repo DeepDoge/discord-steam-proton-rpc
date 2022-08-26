@@ -17,16 +17,6 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
             var exit = false;
 
-            if (!Console.IsInputRedirected)
-            {
-                while (true)
-                {
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.X) break;
-                }
-                exit = true; // tell thread to exit
-            }
-
             void task()
             {
                 var showExitText = true;
@@ -64,61 +54,113 @@ namespace MyApp // Note: actual namespace depends on the project name.
 
                     if (changesMade) File.WriteAllText(settingsJsonPath, JsonConvert.SerializeObject(settings, Formatting.Indented));
                 }
+                SetSettings();
 
                 while (!exit)
                 {
-                    if (showExitText) Console.WriteLine("Press X to exit");
-                    showExitText = false;
-
-                    SetSettings();
-
-                    var steamProcesses = Process.GetProcessesByName("steam.exe").Concat((Process.GetProcessesByName("steam")));
-                    Thread.Sleep(1000);
-                    foreach (var steamProcess in steamProcesses)
+                    try
                     {
-                        if (steamProcess.MainModule == null) continue;
+                        if (showExitText) Console.WriteLine("Press X to exit");
+                        showExitText = false;
 
-                        var commandLine = GetCommandLineOfProcess(steamProcess);
-                        if (commandLine.Length == 0) continue;
-                        var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
-                        if (!commandLine.StartsWith(prefix)) continue;
-                        const string gameFilenameSuffix = ".exe";
-                        var gameFileNameEnd = commandLine.LastIndexOf(gameFilenameSuffix) + gameFilenameSuffix.Length;
-                        if (gameFileNameEnd < 0) continue;
-                        var gameFilename = commandLine.Substring(prefix.Length, gameFileNameEnd - prefix.Length);
-                        Console.WriteLine(gameFilename);
-                        if (String.IsNullOrEmpty(gameFilename)) continue;
-                        if (!gameFilename.EndsWith(".exe")) continue;
+                        SetSettings();
 
-                        var gameDirname = String.Empty;
-                        var steamAppsDirname = Path.GetDirectoryName(gameFilename);
-                        while (!String.IsNullOrEmpty(steamAppsDirname) && !steamAppsDirname.EndsWith("/steamapps/common"))
+                        var steamProcesses = Process.GetProcessesByName("steam.exe").Concat(Process.GetProcessesByName("steam"));
+                        if (settings.detectEveryGameProcess) steamProcesses = steamProcesses.Concat(Process.GetProcessesByName("reaper"));
+                        Thread.Sleep(1000);
+                        foreach (var steamProcess in steamProcesses)
                         {
-                            gameDirname = steamAppsDirname;
-                            steamAppsDirname = Path.GetDirectoryName(gameDirname);
+                            if (steamProcess.MainModule == null) continue;
+
+                            var commandLine = GetCommandLineOfProcess(steamProcess);
+                            if (commandLine.Length == 0) continue;
+
+                            var gameFilename = default(string);
+                            if (steamProcess.ProcessName.StartsWith("steam"))
+                            {
+                                var prefix = steamProcess.ProcessName == "steam.exe" ? "c:\\windows\\system32\\steam.exe " : "steam ";
+                                if (!commandLine.StartsWith(prefix)) continue;
+
+                                const string gameFilenameSuffix = ".exe";
+                                var gameFileNameEnd = commandLine.LastIndexOf(gameFilenameSuffix) + gameFilenameSuffix.Length;
+                                if (gameFileNameEnd < 0) continue;
+                                gameFilename = commandLine.Substring(prefix.Length, gameFileNameEnd - prefix.Length);
+                                if (String.IsNullOrEmpty(gameFilename)) continue;
+                                if (!gameFilename.EndsWith(".exe")) continue;
+                            }
+                            else if (steamProcess.ProcessName == "reaper")
+                            {
+                                const string gameFilenamePrefix = "-- /";
+                                var startsAt = commandLine.IndexOf(gameFilenamePrefix, commandLine.IndexOf("reaper SteamLaunch AppId="));
+                                if (startsAt < 0) continue;
+                                gameFilename = commandLine.Substring(startsAt + gameFilenamePrefix.Length - 1);
+                                if (String.IsNullOrEmpty(gameFilename)) continue;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Unexpected steam process name: {steamProcess.ProcessName} PID: {steamProcess.Id}");
+                            }
+                            Console.WriteLine(gameFilename);
+
+                            var gameDirname = String.Empty;
+                            var steamAppsDirname = Path.GetDirectoryName(gameFilename);
+                            while (!String.IsNullOrEmpty(steamAppsDirname) && !steamAppsDirname.EndsWith("/steamapps/common"))
+                            {
+                                gameDirname = steamAppsDirname;
+                                steamAppsDirname = Path.GetDirectoryName(gameDirname);
+                            }
+                            if (String.IsNullOrEmpty(steamAppsDirname)) continue;
+
+                            var gameName = Path.GetFileName(gameDirname);
+
+                            if (settings.createSymbolicLinkForSteamApps && !IsSymbolic(gameDirname))
+                            {
+                                var steamAppsHiddenDirname = Path.Join(Path.GetDirectoryName(steamAppsDirname), "__common_hidden__discord-steam-proton-rpc");
+                                if (!Directory.Exists(steamAppsHiddenDirname)) Directory.CreateDirectory(steamAppsHiddenDirname);
+                                var gameDirnameHidden = Path.Join(steamAppsHiddenDirname, gameName);
+                                Console.WriteLine($"Moving {gameDirname} to {gameDirnameHidden}\nAnd linking it back to {gameDirname}");
+                                Directory.Move(gameDirname, gameDirnameHidden);
+                                Directory.CreateSymbolicLink(gameDirname, gameDirnameHidden);
+                            }
+
+                            var fakeDir = Path.Join(steamAppsDirname, "__discord_proton_rpc");
+                            var fakeExe = Path.Join(fakeDir, gameName);
+
+                            if (File.Exists(fakeExe) && IsFileLocked(new FileInfo(fakeExe))) continue;
+
+                            Console.WriteLine($"Found PID:{steamProcess.Id} {gameFilename}");
+
+                            if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
+                            File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeExe, true);
+
+                            var rpcProcess = new Process();
+                            rpcProcess.StartInfo.FileName = fakeExe;
+                            rpcProcess.StartInfo.Arguments = $"{steamProcess.Id} {currentProcess.Id}";
+                            rpcProcess.Start();
+
+                            Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeExe}");
+                            showExitText = true;
                         }
-                        if (steamAppsDirname == String.Empty) continue;
-
-                        var fakeDir = Path.Join(steamAppsDirname, "discord_proton_rpc");
-                        var fakeExe = Path.Join(fakeDir, Path.GetFileName(gameDirname));
-
-                        if (IsFileLocked(new FileInfo(fakeExe))) continue;
-
-                        Console.WriteLine($"Found PID:{steamProcess.Id} {gameFilename}");
-
-                        if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
-                        File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeExe, true);
-
-                        var rpcProcess = new Process();
-                        rpcProcess.StartInfo.FileName = fakeExe;
-                        rpcProcess.StartInfo.Arguments = $"{steamProcess.Id} {currentProcess.Id}";
-                        rpcProcess.Start();
-
-                        Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeExe}");
-                        showExitText = true;
+                    }
+                    catch (System.Exception ex)
+                    {
+                        File.AppendAllText(Path.Join(currentDirectory, "log.log"), $"{ex.ToString()}\n");
                     }
                 }
             }
+
+            new Thread(() =>
+            {
+                if (!Console.IsInputRedirected)
+                {
+                    while (true)
+                    {
+                        var key = Console.ReadKey(true);
+                        if (key.Key == ConsoleKey.X) break;
+                    }
+                    exit = true; // tell thread to exit
+                }
+            }).Start();
 
             // Start task
             // Wait for it to exit
@@ -129,8 +171,15 @@ namespace MyApp // Note: actual namespace depends on the project name.
                 taskThread.Start();
                 taskThread.Join();
                 if (exit) break;
+                Console.WriteLine("Restarting Task...");
                 Thread.Sleep(2000);
             }
+        }
+
+        private static bool IsSymbolic(string path)
+        {
+            FileInfo pathInfo = new FileInfo(path);
+            return pathInfo.Attributes.HasFlag(FileAttributes.ReparsePoint);
         }
 
         private static string GetCommandLineOfProcess(Process process)
