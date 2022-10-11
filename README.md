@@ -12,6 +12,7 @@ EDIT: now also works for non proton linux games too, because discord also shows 
 # Build And Usage
 ## Build (Skip this part if you are just gonna download the executables)
 - You need to have `dotnet` sdk for `.NET6.0` (You only need this, if you wanna build it yourself)
+-- Or you can use the VSCode DevContainer extension and open the project in Container.
 - Then run `build.sh`.
 - It's gonna create 2 executable files in `./dist`.
 ### If you don't wanna build
