@@ -21,7 +21,8 @@
 		"ms-dotnettools.csharp",
 		"eamodio.gitlens",
 		"github.vscode-pull-request-github",
-		"patcx.vscode-nuget-gallery"
+		"patcx.vscode-nuget-gallery",
+		"GitHub.copilot"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
