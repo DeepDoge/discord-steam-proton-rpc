@@ -17,7 +17,7 @@ EDIT: now also works for non proton linux games too, because discord also shows 
 - Then run `build.sh`.
 - It's gonna create 2 executable files in `./dist`.
 ### If you don't wanna build
-Download executables: https://github.com/DeepDoge/discord-steam-proton-rpc/releases/download/release-5/dist.zip
+Download executables: https://github.com/DeepDoge/discord-steam-proton-rpc/releases/download/release-6/dist.zip
 ## Usage
 - Just run the the `discord-steam-proton-rpc` in `dist` directory.
 - - Or add it to your startup application.
