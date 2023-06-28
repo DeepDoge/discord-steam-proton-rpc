@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -173,8 +173,10 @@ public class Program
             steamProcesses = steamProcesses.Concat(Process.GetProcessesByName("reaper"));
         if (settings.hideProtonWineProcessesFromDiscordUsingSymbolicLinks)
             steamProcesses = steamProcesses
+                .Concat(Process.GetProcessesByName("proton"))
                 .Concat(Process.GetProcessesByName("wineserver"))
-                .Concat(Process.GetProcessesByName("pressure-vessel-wrap"));
+                .Concat(Process.GetProcessesByName("pressure-vessel-wrap"))
+                .Concat(Process.GetProcessesByName("pv-bwrap"));
 
         return steamProcesses;
     }
