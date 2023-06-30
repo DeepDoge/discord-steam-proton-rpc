@@ -22,7 +22,7 @@ public struct SteamProcess
         "steam.exe",
         "steam"
     };
-    public static readonly string SteamAppNameSuffixInPath = "/steamapps/common/";
+    public static readonly string SteamAppsCommonPathPart = "/steamapps/common/";
     public static IEnumerable<SteamProcess> FindAll(ref Settings settings)
     {
         var steamProcesses = new List<SteamProcess>();
@@ -46,7 +46,7 @@ public struct SteamProcess
                 const string prefix = "Z:\\";
                 if (!commandLine.StartsWith(prefix)) continue;
                 var gameFilename = $"/{commandLine.Substring(prefix.Length).Replace('\\', '/')}";
-                var gameDirname = gameFilename.Substring(0, gameFilename.IndexOf("/", gameFilename.IndexOf(SteamAppNameSuffixInPath) + SteamAppNameSuffixInPath.Length));
+                var gameDirname = gameFilename.Substring(0, gameFilename.IndexOf("/", gameFilename.IndexOf(SteamAppsCommonPathPart) + SteamAppsCommonPathPart.Length));
 
                 if (foundDirs.Contains(gameDirname)) continue;
                 foundDirs.Add(gameDirname);
@@ -58,9 +58,9 @@ public struct SteamProcess
                     dirname = gameDirname
                 });
             }
-            else if (filename.Contains(SteamAppNameSuffixInPath))
+            else if (filename.Contains(SteamAppsCommonPathPart))
             {
-                var dirname = filename.Substring(0, filename.IndexOf("/", filename.IndexOf(SteamAppNameSuffixInPath) + SteamAppNameSuffixInPath.Length));
+                var dirname = filename.Substring(0, filename.IndexOf("/", filename.IndexOf(SteamAppsCommonPathPart) + SteamAppsCommonPathPart.Length));
 
                 if (foundDirs.Contains(dirname)) continue;
                 foundDirs.Add(dirname);
