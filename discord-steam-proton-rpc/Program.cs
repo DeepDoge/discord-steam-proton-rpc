@@ -61,7 +61,7 @@ public class Program
                 rpcProcess.StartInfo.Arguments = $"{steamProcess.process.Id} {currentProcess.Id}";
                 rpcProcess.Start();
 
-                Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeGameFilename}");
+                Console.WriteLine($"[RPC] Started PID:{rpcProcess.Id} {fakeGameFilename}");
             }
         }
 

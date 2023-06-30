@@ -5,7 +5,7 @@ class RpcTrigger
 {
     static void Main(string[] args)
     {
-        Application.Init(); 
+        Application.Init();
 
         var exit = false;
 
@@ -45,6 +45,6 @@ class RpcTrigger
 
 
         Application.Run();
-        Console.WriteLine($"Stopping PID:{Process.GetCurrentProcess().Id}");
+        Console.WriteLine($"[RPC] Stopped PID:{Process.GetCurrentProcess().Id} {Process.GetCurrentProcess().MainModule?.FileName ?? ""}");
     }
 }
