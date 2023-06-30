@@ -7,7 +7,7 @@ public class Program
         var currentProcess = Process.GetCurrentProcess();
         if (currentProcess.MainModule == null) throw new Exception("Current process doesn't have a main module\nThis is not expected.");
         var currentDirectory = Path.GetDirectoryName(currentProcess.MainModule.FileName);
-        var settingsJsonPath = Path.Join(currentDirectory, "settings.json");
+        var settingsJsonPath = Path.Join(currentDirectory, "settings.v1.json");
         var settings = default(Settings);
         settings.Update(settingsJsonPath);
 
@@ -27,21 +27,26 @@ public class Program
 
         void Loop()
         {
+            const string fakeGameDirnameSuffix = "__discord_proton_rpc";
+
             settings.Update(settingsJsonPath);
 
-            var steamProcesses = SteamProcess.FindAll(ref settings);
+            var steamProcesses = SteamProcess.FindAll(ref settings).Where((steamProcess) => !steamProcess.dirname.EndsWith(fakeGameDirnameSuffix));
+            Console.WriteLine();
             Console.WriteLine($"Found {steamProcesses.Count()} Steam processes");
             foreach (var steamProcess in steamProcesses)
             {
-                Console.WriteLine($"[{steamProcess.type}] PID:{steamProcess.process.Id} {steamProcess.dirname}");
-                if (steamProcess.type == SteamProcess.Type.ProtonWineHelper) continue;
-
-                const string fakeGameDirnameSuffix = "__discord_proton_rpc";
-                if (steamProcess.dirname.EndsWith(fakeGameDirnameSuffix)) continue;
                 var steamAppsCommonDirname = Path.GetDirectoryName(steamProcess.dirname);
                 var steamAppsDirname = Path.GetDirectoryName(steamAppsCommonDirname);
 
-                var gameName = Path.GetFileNameWithoutExtension(steamProcess.dirname);
+                Console.WriteLine($"[{steamProcess.type}] PID:{steamProcess.process.Id} {steamProcess.process.ProcessName} {steamProcess.dirname}");
+                if (steamProcess.type == SteamProcess.Type.ProtonWineHelper) continue;
+
+                var gameName = string.Join("", Path.GetFileNameWithoutExtension(steamProcess.dirname).Select((c) =>
+                {
+                    if (char.IsUpper(c)) return $"*{c}";
+                    return $"{c}";
+                })).Replace(" *", " ").Replace("*", " ").Trim();
 
                 var fakeGameDirname = Path.Join(steamAppsCommonDirname, fakeGameDirnameSuffix);
                 var fakeGameFilename = Path.Join(fakeGameDirname, gameName);
