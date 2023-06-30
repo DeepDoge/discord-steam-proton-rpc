@@ -3,16 +3,13 @@ using Newtonsoft.Json.Linq;
 
 public struct Settings
 {
-    public bool detectNonProtonProcesses;
-    public bool hideProtonWineProcessesFromDiscordUsingSymbolicLinks;
 }
 
 public static class SettingsImpl
 {
     private static readonly Settings DefaultSettings = new Settings
     {
-        detectNonProtonProcesses = true,
-        hideProtonWineProcessesFromDiscordUsingSymbolicLinks = true
+
     };
 
     public static void Update(this ref Settings self, string settingsJsonPath)

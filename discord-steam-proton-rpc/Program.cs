@@ -11,7 +11,7 @@ public class Program
         var settings = default(Settings);
         settings.Update(settingsJsonPath);
 
-        Console.WriteLine($"Runnning...");
+        Console.WriteLine($"Runnning... (Press ESCAPE to exit)");
 
         var exit = false;
         new Thread(() =>
@@ -29,53 +29,34 @@ public class Program
         {
             settings.Update(settingsJsonPath);
 
-            var steamProcesses = Utils.FindSteamProccesses(ref settings);
+            var steamProcesses = SteamProcess.FindAll(ref settings);
+            Console.WriteLine($"Found {steamProcesses.Count()} Steam processes");
             foreach (var steamProcess in steamProcesses)
             {
-                var gameDirname = String.Empty;
-                var steamAppsDirname = Path.GetDirectoryName(steamProcess.filename);
-                while (!String.IsNullOrEmpty(steamAppsDirname) && !steamAppsDirname.EndsWith("/steamapps/common"))
-                {
-                    gameDirname = steamAppsDirname;
-                    steamAppsDirname = Path.GetDirectoryName(gameDirname);
-                }
-                if (String.IsNullOrEmpty(steamAppsDirname)) continue;
+                Console.WriteLine($"[{steamProcess.type}] PID:{steamProcess.process.Id} {steamProcess.dirname}");
+                if (steamProcess.type == SteamProcess.Type.ProtonWineHelper) continue;
 
-                var gameName = Path.GetFileNameWithoutExtension(gameDirname);
-                if (gameName == "__discord_proton_rpc") continue;
+                const string fakeGameDirnameSuffix = "__discord_proton_rpc";
+                if (steamProcess.dirname.EndsWith(fakeGameDirnameSuffix)) continue;
+                var steamAppsCommonDirname = Path.GetDirectoryName(steamProcess.dirname);
+                var steamAppsDirname = Path.GetDirectoryName(steamAppsCommonDirname);
 
-                if (steamProcess.type == Utils.SteamProcess.Type.ProtonWine)
-                {
-                    if (Utils.IsSymbolic(gameDirname)) continue;
+                var gameName = Path.GetFileNameWithoutExtension(steamProcess.dirname);
 
-                    var steamAppsHiddenDirname = Path.Join(Path.GetDirectoryName(steamAppsDirname), "__common_hidden__discord-steam-proton-rpc");
-                    if (!Directory.Exists(steamAppsHiddenDirname)) Directory.CreateDirectory(steamAppsHiddenDirname);
-                    var gameDirnameHidden = Path.Join(steamAppsHiddenDirname, Path.GetFileName(gameDirname));
-                    Console.WriteLine($"Moving {gameDirname} to {gameDirnameHidden}\nAnd linking it back to {gameDirname}");
-                    Directory.Move(gameDirname, gameDirnameHidden);
-                    Directory.CreateSymbolicLink(gameDirname, gameDirnameHidden);
+                var fakeGameDirname = Path.Join(steamAppsCommonDirname, fakeGameDirnameSuffix);
+                var fakeGameFilename = Path.Join(fakeGameDirname, gameName);
 
-                    continue;
-                }
+                if (!Directory.Exists(fakeGameDirname)) Directory.CreateDirectory(fakeGameDirname);
+                if (File.Exists(fakeGameFilename) && Utils.IsFileLocked(new FileInfo(fakeGameFilename))) continue;
 
-                var fakeDir = Path.Join(steamAppsDirname, "__discord_proton_rpc");
-                var fakeExe = Path.Join(fakeDir, gameName);
-
-                if (File.Exists(fakeExe) && Utils.IsFileLocked(new FileInfo(fakeExe))) continue;
-
-                Console.WriteLine($"Found PID:{steamProcess.process.Id} PNAME:{steamProcess.process.ProcessName}");
-
-                if (!Directory.Exists(fakeDir)) Directory.CreateDirectory(fakeDir);
-                File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeExe, true);
-
-                Thread.Sleep(5000);
+                File.Copy(Path.Join(currentDirectory, "rpc-trigger"), fakeGameFilename, true);
 
                 var rpcProcess = new Process();
-                rpcProcess.StartInfo.FileName = fakeExe;
+                rpcProcess.StartInfo.FileName = fakeGameFilename;
                 rpcProcess.StartInfo.Arguments = $"{steamProcess.process.Id} {currentProcess.Id}";
                 rpcProcess.Start();
 
-                Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeExe}");
+                Console.WriteLine($"Running RPC at PID:{rpcProcess.Id} {fakeGameFilename}");
             }
         }
 

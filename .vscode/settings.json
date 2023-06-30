@@ -1,5 +1,11 @@
 {
     "workbench.colorTheme": "Atom One Dark",
     "workbench.iconTheme": "material-icon-theme",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
 }
