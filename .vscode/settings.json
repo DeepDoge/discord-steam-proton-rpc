@@ -1,6 +1,4 @@
 {
-    "workbench.colorTheme": "Atom One Dark",
-    "workbench.iconTheme": "material-icon-theme",
     "editor.formatOnSave": true,
     "[csharp]": {
         "editor.defaultFormatter": "ms-dotnettools.csharp"
