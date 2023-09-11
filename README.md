@@ -2,9 +2,9 @@
 
 This thing let's Discord see your Steam games that are running with Proton.<br/>
 This is not really using Discord's Rich Rresence, but using Discord's Steam game detection. So they look like any other Steam game.<br/>
-EDIT: now also works for non proton linux games too, because discord also shows the short process name for them, instead of the full name of the game.
 
-**Also works with Flatpak Steam**
+Also works with Flatpak Steam, and works better with it too, since Flatpak Steam processes not showing up on Discord at all, it doesn't have to fight with non-game processes.<br/>
+So it's recommended that you use Flatpak Steam
 
 # Build And Usage
 
