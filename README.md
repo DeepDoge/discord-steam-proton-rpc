@@ -5,7 +5,7 @@ This is not really using Discord's Rich Rresence, but using Discord's Steam game
 
 Also works with Flatpak Steam, and works better with it too, since Flatpak Steam processes not showing up on Discord at all, it doesn't have to fight with non-game processes.
 
-So it's recommended that you use Flatpak Steam
+So it's **recommended** that you use Flatpak Steam
 
 # Build And Usage
 
