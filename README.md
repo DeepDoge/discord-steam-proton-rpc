@@ -1,9 +1,10 @@
 # What is this?
 
 This thing let's Discord see your Steam games that are running with Proton.<br/>
-This is not really using Discord's Rich Rresence, but using Discord's Steam game detection. So they look like any other Steam game.<br/>
+This is not really using Discord's Rich Rresence, but using Discord's Steam game detection. So they look like any other Steam game.
 
-Also works with Flatpak Steam, and works better with it too, since Flatpak Steam processes not showing up on Discord at all, it doesn't have to fight with non-game processes.<br/>
+Also works with Flatpak Steam, and works better with it too, since Flatpak Steam processes not showing up on Discord at all, it doesn't have to fight with non-game processes.
+
 So it's recommended that you use Flatpak Steam
 
 # Build And Usage
